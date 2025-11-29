@@ -38,8 +38,6 @@ class HTTPLoadBalancer:
             }
         }
         
-        # TODO: Initialize server statistics if needed
-        # You can implement server statistics tracking here
         self.server_stats = {domain: {"total_requests": 0, "failed_requests": 0} for domain in self.upstream_groups}
         self._threads = []     
         
@@ -61,13 +59,11 @@ class HTTPLoadBalancer:
                 print(f"  Servers: {len(group['servers'])}")
             print("=" * 50)
             
-            # TODO: Add extra startup logic you need
             health_thread = threading.Thread(target=self.monitor_health, daemon=True, name="health")
             health_thread.start()
             self._threads.append(health_thread)
 
-            # Accept HTTP connections, Doesn't need any changes
-
+            # Accept HTTP connections
             command_thread = threading.Thread(target=self.handle_commands, daemon=True, name="command")
             command_thread.start()
             self._threads.append(command_thread)
@@ -113,15 +109,9 @@ class HTTPLoadBalancer:
         if not good_servers:
             return None
 
-        
-        
-        # TODO: Implement the select_upstream_server method
         # Route incoming requests to the appropriate upstream server group based on the Host header
         # Make sure to filter out unhealthy servers
         # Use the configured algorithm for the specified domain
-
-
-
         server = None
         if algorithm == ROUND_ROBIN:
             # TODO: Implement weights round robin algorithm
@@ -145,8 +135,6 @@ class HTTPLoadBalancer:
             
             
         elif algorithm == LEAST_TIME:
-            # TODO: Implement least time algorithm
-            # HINT: Do not consider weights for this algorithm
             # Initialize response_time for servers that don't have it
             for s in good_servers:
                 if "response_time" not in s:
@@ -155,8 +143,8 @@ class HTTPLoadBalancer:
             # Select server with minimum response time
             server = min(good_servers, key=lambda s: s["response_time"])
         
-        return server # TODO: Return the selected upstream server
-    
+        return server
+        
     def handle_http_request(self, client_socket, client_address):
         """
         Handle HTTP request from client
@@ -183,13 +171,11 @@ class HTTPLoadBalancer:
                     self.send_error_response(client_socket, 404, "Domain Not Found")
                 return
 
-            # TODO: Select the appropriate upstream server based on the Host header
             # If there is the Host header routing failed, requests should be responed
             # with a default response from the load balancer
             # If routing has succeeded, forward the request to the upstream server
             # If the upstream group has no healthy servers, the request should be responded
             # with a 503 status code with message "No Healthy Upstream"
-
             result = self.forward_http_request(client_socket, upstream_server, request_data)
             upstream = result["upstream_server"]
             if result:
@@ -203,12 +189,6 @@ class HTTPLoadBalancer:
                         self.server_stats[host_header]["failed_requests"] += 1
                     upstream["healthy"] = False
 
-            # TODO: Use the result data for statistics, passive health check, etc.
-            # result contains: success, response_time, response_data, server_id, upstream_server
-            # You can implement server statistics tracking here
-            # You can implement passive health checking here
-
-            
         except Exception as e:
             print(f"Error handling request from {client_address}: {e}")
             self.send_error_response(client_socket, 500, "Internal Server Error: " + str(e))
@@ -219,9 +199,6 @@ class HTTPLoadBalancer:
         """
         Extract Host header from HTTP request
         """
-        # TODO: Implement the extract_host_header method
-        # Extract the Host header from the HTTP request
-        # Return the Host header
         host_header: str = ""
         lines = request_str.split("\r\n")
         for line in lines:
@@ -292,21 +269,15 @@ class HTTPLoadBalancer:
         """
         while self.running:
             try:
-                # TODO: Implement the monitor_health method
                 # Check the health of all upstream servers and update the health status
                 for domain, group in self.upstream_groups.items():
                     for server in group["servers"]:
 
                         # Check health of each server
                         server["healthy"] = self.check_server_health(server)
-
-                
-            #    time.sleep(5)
-                
             except Exception as e:
                 print(f"Health monitoring error: {e}, Backing off for 5 seconds")
                 time.sleep(5)
-
             finally:
                 time.sleep(10)
 
@@ -316,7 +287,6 @@ class HTTPLoadBalancer:
         Check if a server is healthy by making a health check request
         """
         try:
-            # TODO: Write the health check request
             health_request = (
                 "GET /healthz HTTP/1.1\r\n"
                 f"Host: {server['host']}\r\n"
@@ -334,8 +304,6 @@ class HTTPLoadBalancer:
             
             health_check_result: bool = False
 
-            # TODO: Handle the health check response and update health_check_result
-            # You can use `response` variable to implement your logic
             if "200 OK" in response:
                 health_check_result = True
             else:
@@ -350,7 +318,6 @@ class HTTPLoadBalancer:
         """
         Handle load balancer commands
         """
-        # TODO: Implement the handle_commands method
         # LoadBalancer should support the following commands:
         # - list: list all upstream servers and their health status
         # - quit: stop the load balancer
@@ -377,8 +344,6 @@ class HTTPLoadBalancer:
         """
         List upstream servers and their health status
         """
-        # TODO: Implement the list_upstream_servers method
-        # Use the function in handle_commands to list the upstream servers
         print("Upstream Servers Status:")
         print("=" * 40)
         for dom, grp in self.upstream_groups.items():
@@ -418,17 +383,10 @@ class HTTPLoadBalancer:
                 )
             print()
 
-
-
-
-
     def quit_load_balancer(self):
         """
         Quit the load balancer
         """
-        # TODO: Implement the quit_load_balancer method
-        # Add any extra shutdown logic you need and use the function in handle_commands
-
         self.running = False
         if self.lb_socket:
             try:
@@ -436,12 +394,9 @@ class HTTPLoadBalancer:
             except Exception:
                 pass
         print("Shutting down load balancer...")
-    #    self.start_load_balancer()
     
     def send_error_response(self, client_socket, status: int, message: str = ""):
         """Send HTTP error response to client"""
-        # TODO: Implement the send_error_response method
-        # Write proper HTTP response to the client
         http_response = ( 
             f"HTTP/1.1 {status} {message}\r\n"
             "Content-Type: text/plain\r\n"
@@ -458,8 +413,6 @@ class HTTPLoadBalancer:
         if self.lb_socket:
             self.lb_socket.close()
         print("Load balancer stopped")
-
-        # TODO: Add extra shutdown logic you need
 
 def main():
     """
